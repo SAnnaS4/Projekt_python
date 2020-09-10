@@ -1,10 +1,10 @@
 # Load the TensorBoard notebook extension
 
 
-#from tensorboard import program
-#tb = program.TensorBoard()
-#tb.configure(argv=[None, '--logdir', 'C:/Users/Anna/Desktop/Masterarbeit/logs'])
-#url = tb.launch()
+# from tensorboard import program
+# tb = program.TensorBoard()
+# tb.configure(argv=[None, '--logdir', 'C:/Users/Anna/Desktop/Masterarbeit/logs'])
+# url = tb.launch()
 
 import datetime
 import pandas as pd
@@ -14,7 +14,6 @@ import os
 import matplotlib.pyplot as plt
 from LoadCSVDataLocation import LoadData
 from sklearn.model_selection import GridSearchCV
-
 
 import test_train_split_data
 
@@ -54,7 +53,7 @@ EAC_test.columns = ['label', '500nm', '505nm', '510nm', '515nm', '520nm',
                     '750nm', '755nm', '760nm', '765nm', '770nm', '775nm', '780nm',
                     '785nm', '790nm', '795nm',
                     '800nm', 'c1', 'c2', 'c3', 'c4']
-#c1, c2, c3, c4 raus
+# c1, c2, c3, c4 raus
 
 # 65 + lables
 print('Patienttestset')
@@ -68,6 +67,7 @@ labels = np.int_(labels)
 print(labels)
 x_train, y_train, x_test, y_test = test_train_split_data.train_test(
     EAC_test).div_set_balanced_3classes()
+
 
 def showSomeData(x_test, y_test):
     eac = x_test[np.where(y_test == 1)[0][0]]
@@ -97,6 +97,7 @@ def showSomeData(x_test, y_test):
     axs[3, 1].plot(blank_mean)
     axs[3, 2].plot(blank_std)
     plt.show()
+
 
 def kmean(x_train, y_train, x_test, y_test):
     # mit mehr Daten könnte es gut werden --> alle Bilder verwenden
@@ -136,6 +137,7 @@ def kmean(x_train, y_train, x_test, y_test):
     print("Anzahl 2", np.where(prediction == 2)[0].size)
     print("Anzahl 3", np.where(prediction == 3)[0].size)
 
+
 def get_model(layer_sizes, dropout, learning_rate, activation):
     model = tf.keras.Sequential()
     # model.add(tf.keras.layers.Flatten())
@@ -154,7 +156,7 @@ def get_model(layer_sizes, dropout, learning_rate, activation):
 
 
 layer_sizes = [(128, 128, 128), (128, 128, 64, 64), (
-128, 128, 64, 32)]  # , (64, 32), (16,)]#,(32,), (16, 16), (32, 32), (64,), (16,16,16)]#, [16, 16], [32, 32]]
+    128, 128, 64, 32)]  # , (64, 32), (16,)]#,(32,), (16, 16), (32, 32), (64,), (16,16,16)]#, [16, 16], [32, 32]]
 classifier = tf.keras.wrappers.scikit_learn.KerasClassifier(get_model, batch_size=32)
 validator = GridSearchCV(classifier,
                          param_grid={'epochs': [40],  # , 20, 30],
@@ -190,8 +192,8 @@ def mlp(x_train, y_train, x_test, y_test):
     model.compile(optimizer=opt, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     print('##################################Fitting######################################')
 
-   # log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-   # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+    # log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
     model.fit(x=x_train, y=y_train, epochs=60)
     print('##################################Evaluierung##################################')
@@ -205,12 +207,13 @@ def mlp(x_train, y_train, x_test, y_test):
     model.evaluate(x_test[np.where(y_test == 4)], y_test[np.where(y_test == 4)])
     return model
 
+
 showSomeData(x_train, y_train)
 kmean(x_train, y_train, x_test, y_test)
-model_mlp = mlp(x_train,y_train,x_test,y_test)
+model_mlp = mlp(x_train, y_train, x_test, y_test)
 model_mlp.save_weights('C:/Users/Anna/Desktop/Masterarbeit/checkpoints/myCheckpoint')
 # model.load_weights('C:/Users/Anna/Desktop/Masterarbeit/checkpoints/myCheckpoint')
 
-#größe Modell Marianne schicken
-#pixel abschnitte zusammen betrachten
-#teste testgrößen
+# größe Modell Marianne schicken
+# pixel abschnitte zusammen betrachten
+# teste testgrößen

@@ -77,7 +77,7 @@ depth_pool_mean = tensorflow.keras.layers.Lambda(
 depth_pool_max = tensorflow.keras.layers.Lambda(
     lambda X: tf.compat.v1.reduce_max(X, axis=[3], keepdims=True))
 
-# Create model as 2D + 61 channel
+#Create model as 2D + 61 channel
 # model = tensorflow.keras.Sequential()
 # model.add(tensorflow.keras.layers.Conv2D(128, kernel_size=3, activation='relu', kernel_initializer='he_uniform',
 #                                          input_shape=sample_shape, padding="SAME"))
@@ -99,6 +99,7 @@ depth_pool_max = tensorflow.keras.layers.Lambda(
 # model.compile(loss=tensorflow.keras.losses.categorical_crossentropy,
 #               optimizer=tensorflow.keras.optimizers.Adam(lr=learning_rate),
 #               metrics=['accuracy'])
+# model.summary()
 #
 # # Fit data to model
 # history = model.fit(x_train, targets_train,
@@ -125,9 +126,9 @@ depth_pool_max = tensorflow.keras.layers.Lambda(
 from tensorboard import program
 from _datetime import datetime
 
-tb = program.TensorBoard()
-tb.configure(argv=[None, '--logdir', 'C:/Users/Anna/Desktop/Masterarbeit/logs'])
-url = tb.launch()
+#tb = program.TensorBoard()
+#tb.configure(argv=[None, '--logdir', 'C:/Users/Anna/Desktop/Masterarbeit/logs'])
+#url = tb.launch()
 
 
 def get_model(layer_sizes, kernel_size, kernel_initializer, depth_pool, dropout, learning_rate, activation):
@@ -136,21 +137,22 @@ def get_model(layer_sizes, kernel_size, kernel_initializer, depth_pool, dropout,
     model.add(tensorflow.keras.layers.Conv2D(layer_sizes[0], kernel_size=kernel_size, activation=activation,
                                              input_shape=sample_shape, kernel_initializer=kernel_initializer,
                                              padding="SAME"))
-    model.add(depth_pool[i])
+    model.add(depth_pool_max)
     i = ++i
     for layer in layer_sizes[1:]:
         model.add(tensorflow.keras.layers.Conv2D(layer, kernel_size=kernel_size, activation=activation,
                                                  kernel_initializer=kernel_initializer, padding="SAME"))
-        model.add(depth_pool[i])
+        model.add(depth_pool_max)
         i = ++i
         if dropout:
             model.add(tf.keras.layers.Dropout(dropout))
+    model.add(tensorflow.keras.layers.Flatten())
     model.add(tensorflow.keras.layers.Dense(256, activation=activation, kernel_initializer='he_uniform'))
     model.add(tensorflow.keras.layers.Dense(no_classes, activation='softmax'))
     # opt = tf.keras.optimizers.SGD(learning_rate=learning_rate)
     model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-    # model.summary()
-    print("{0}, {1}, {2}, {3}, {4}, {5}, {6}".format(layer_sizes, kernel_size, kernel_initializer, depth_pool, dropout,
+    model.summary()
+    print("{0}, {1}, {2}, {3}, {4}, {5}, {6}".format(layer_sizes, kernel_size, kernel_initializer, depth_pool.__name__, dropout,
                                                      learning_rate, activation))
     return model
 
@@ -170,9 +172,9 @@ validator = sklearn.model_selection.GridSearchCV(classifier,
                                                              'learning_rate': [0.001, 0.01],
                                                              'activation': ['relu']}, n_jobs=1)
 
-log_dir = "logs/fit/" + datetime.now().strftime("%Y%m%d-%H%M%S")
-tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-validator.fit(x_train, targets_train, validation_data=(x_test, targets_test), callbacks=[tensorboard_callback])
-#validator.fit(x_train, y_train)
+#log_dir = "logs/fit/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+#tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+#validator.fit(x_train, targets_train, validation_data=(x_test, targets_test), callbacks=[tensorboard_callback])
+validator.fit(x_train, y_train)
 print(validator.best_params_)
 print(validator.best_score_)

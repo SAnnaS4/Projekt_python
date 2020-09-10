@@ -60,9 +60,6 @@ class blind_test_algorithm(object):
         self.y_test = Validation_y_test
         ################
 
-
-
-
         '''
         # first order
         self.features_train = np.diff(np.float_(train_data.values[:, self.Firstnm + 1:self.Lastnm + 1]))
@@ -89,6 +86,8 @@ class blind_test_algorithm(object):
         self.path=test_path
         self.x = PatNum
         self.classifier=classifier
+
+    #keine Ahnung wozu das gut ist
     def check_patientnumber(self):
         f = 'Offenbach.csv'#'TNM 2014-2015_Barrett-CA, Offenbach (1).csv'
         line = []
@@ -110,7 +109,7 @@ class blind_test_algorithm(object):
             for inpath in file_list:
                 newpath = self.path[0] + '/' + inpath
                 file_listnew = os.listdir(newpath)
-                FirstLoop = 1
+             #   FirstLoop = 1
                 for file in file_listnew:
                     # run over csv files only
                     if file.endswith(".csv"):
@@ -118,20 +117,20 @@ class blind_test_algorithm(object):
                         # if path in file_path_gc:
                         for line in linenew:
 
+                            # if line[5] == inpath or line[6] == inpath:
+                            #     # skipping the file with the mean values
+                            #     # skipping the file with the mean values
+
+                       #     if FirstLoop == 1:
                             if line[5] == inpath or line[6] == inpath:
-                                # skipping the file with the mean values
-                                # skipping the file with the mean values
+                               # if FirstLoop == 1:
+                                if line[6] == inpath:
+                                    patientnumber = patientnumber
+                                else:
+                                    patientnumber = patientnumber + 1
 
-                                if FirstLoop == 1:
-                                    if line[5] == inpath or line[6] == inpath:
-                                        if FirstLoop == 1:
-                                            if line[6] == inpath:
-                                                patientnumber = patientnumber
-                                            else:
-                                                patientnumber = patientnumber + 1
-
-                                if patientnumber-1== (self.x):
-                                            self.test_path=newpath
+                            if patientnumber-1== (self.x):
+                                        self.test_path=newpath
 
 
     def training(self,modeltraining, param_grid):
@@ -170,7 +169,6 @@ class blind_test_algorithm(object):
 
     def classification(self,model):
         model.fit(self.x_train, self.y_train)
-
         start_time0 = time.time()
         predicted = model.predict(self.features_test)
         runtime0 = time.time()
@@ -202,36 +200,29 @@ class blind_test_algorithm(object):
             #prec = tp / (tp + fp)
             #f1score = 2 * (prec * sens) / (prec + sens)
         else:
+            print('not equal')
             conf_mat = ConfusionMatrix(self.labels_test, predicted)
-
             #tn, fp, fn, tp = confusion_matrix(self.labels_test, predicted).ravel()
             #specificity = tn / (tn + fp)
             print(confusion_matrix(self.labels_test, predicted))
             print(classification_report(self.labels_test, predicted))
-
             cm = ConfusionMatrix(self.labels_test, predicted)
             cm.print_stats()
             acc = sklm.accuracy_score(self.labels_test, predicted)
             #f1 = sklm.precision_recall_fscore_support(self.labels_test, predicted)
             #multilabel
-
             mcm = sklm.multilabel_confusion_matrix(self.labels_test, predicted)
             tn = mcm[:, 0, 0]
             tp = mcm[:, 1, 1]
             fn = mcm[:, 1, 0]
             fp = mcm[:, 0, 1]
-
             #binary label
-
             #tn, fp, fn, tp = confusion_matrix(self.labels_test, predicted).ravel()
             spec= tn / (tn + fp)
             sens=tp/(tp+fn)
             mcc=((tp*tn)-(fp+fn))/np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
             prec=tp/(tp+fp)
             f1score=2*(prec*sens)/(prec+sens)
-
-
-
         '''
         acc = sklm.accuracy_score(self.labels_test, predicted)
         f1 = sklm.f1_score(self.labels_test, predicted)
@@ -280,6 +271,7 @@ class blind_test_algorithm(object):
         mcc = np.array2string(mcc, formatter={'float_kind': lambda x: " % 2f" % x})
         acc = np.array2string(acc, formatter={'float_kind': lambda x: " % 2f" % x})
         return acc,f1score,spec,mcc,sens  # conf_mat#conf_mat.stats_class
+
     def visualization(self,model):
         filnr=0
         file_list = os.listdir(self.test_path)
@@ -385,11 +377,6 @@ class blind_test_algorithm(object):
                     #spectrum_datanew, ynew=Cube_Read(
                     #    filename, wavearea=100, Firstnm=0, Lastnm=100).cube_matrix()
                     #spectrum_datanew=spectrum_datanew.reshape((640, ynew, 100))
-
-
-
-
-
                     colors = np.zeros((640, pixely, 4))
                     for i in range(pixely):
                         for j in range(640):
@@ -534,7 +521,6 @@ class blind_test_algorithm(object):
         param_grid={'solver': ['gini','entropy'], 'C': [1,10,100,1000],'solver':['lbfgs','saga']}
         test = blind_test_algorithm.training(self, modeltraining=model,
                                              param_grid=param_grid)
-
 
         from sklearn.neural_network import MLPClassifier
         model=MLPClassifier(hidden_layer_sizes=(32, 16),  random_state=1, max_iter=10000)

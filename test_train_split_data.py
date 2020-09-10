@@ -7,6 +7,10 @@ import numpy as np
 import numpy.random as nr
 import pandas as pd
 
+
+def test():
+    print('geht')
+
 class train_test(object):
     def __init__(self, spectra):
         self.spectra = spectra
@@ -117,7 +121,7 @@ class train_test(object):
 
         temp_features = np.concatenate((temp_features_1,temp_features_2[ind_2,:], temp_features_3[ind_3,:], temp_features_4[ind_4,:]), axis=0)
         temp_features = np.float_(temp_features)
-        temp_labels = np.concatenate((temp_label_1, temp_label_2[ind_2,],temp_label_3[ind_3,],temp_label_4[ind_4,]), axis=0)
+        temp_labels = np.concatenate((temp_label_1, temp_label_2[ind_2,],temp_label_3[ind_3,], temp_label_4[ind_4,]), axis=0)
         print('After Undersampling')
         print("EAC ", temp_features_1.shape[0])
         print("Stroma          - ", temp_features_2[ind_2,:].shape[0])

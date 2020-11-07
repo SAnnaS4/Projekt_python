@@ -4,10 +4,9 @@ from LoadMarker import LoadMarker
 from hypercube_data import Cube_Read
 import os
 
-
 class LoadPatients:
     all_values = []
-    liste = np.zeros([0, 61, 3, 3])
+    liste = np.zeros([0, 3, 3, 61])
 
     def __init__(self, ordner, groupname0, groupname1, groupname2, groupname3, groupname4, groupname5):
         self.groupname0 = groupname0
@@ -83,7 +82,7 @@ class LoadPatients:
         path = 'C:/Users/Anna/Desktop/Masterarbeit/npz/eac' + str(patientnumber)
         np.savez_compressed(path, x=self.liste, y=values)
         self.all_values = []
-        self.liste = np.zeros([0, 61, 3, 3])
+        self.liste = np.zeros([0, 3, 3, 61])
         return path
 
     def search_in_neighborhood(self, arr, x, y, d=1):
@@ -94,18 +93,19 @@ class LoadPatients:
         for i in range(leange):
             for j in range(leange):
                 try:
-                    nachbarn.append(arr[start_x, start_y])
+                    nachbarn.append(arr[start_x, start_y, :])
                 except:
-                    nachbarn.append(0)
+                    nachbarn.append(np.zeros(61))
                 start_x += 1
             start_x = x - d
             start_y += 1
-        nachbarn = np.reshape(nachbarn, (3, 3))
+        nachbarn = np.reshape(nachbarn, (3, 3, 61))
         return nachbarn
 
     def get_section(self, im, i, j, d=1):
-        n = im[i - d:i + d + 1, j - d:j + d + 1]
-        if n.size < ((1 + d * 2) ** 2):
+        n = im[i - d:i + d + 1, j - d:j + d + 1, :]
+        size = np.shape(n)[0] * np.shape(n)[1]
+        if size < ((1 + d * 2) ** 2):
             n = self.search_in_neighborhood(im, i, j, d)
         return n
 
@@ -123,10 +123,11 @@ class LoadPatients:
             self.all_values.append(group)
             self.all_values.append(patientnumber)
             self.all_values.append(newpath)
-            section3d = np.zeros([0, 3, 3])
-            for iwave in range(0, i_wave_length):
-                section = self.get_section(spectrum_data[:, :, iwave], x, y, 1)
-                section3d = np.append(section3d, [section], axis=0)
+            #section3d = np.zeros([0, 3, 3])
+            section3d = self.get_section(spectrum_data[:, :, :], x, y, 1)
+            # for iwave in range(0, i_wave_length):
+            #     section = self.get_section(spectrum_data[:, :, iwave], x, y, 1)
+            #     section3d = np.append(section3d, [section], axis=0)
             self.liste = np.append(self.liste, [section3d], axis=0)
         print('Marker Loaded')
 

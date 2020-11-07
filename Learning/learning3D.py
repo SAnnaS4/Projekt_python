@@ -37,7 +37,6 @@ for file in file_list:
 # 3 => Plattenepithel
 # 4 => Blank
 
-
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=42)
 
 # -- Preparatory code --

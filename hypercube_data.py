@@ -4,8 +4,6 @@ from skimage import exposure
 from scipy.signal import savgol_filter
 from sklearn import preprocessing
 
-
-
 class Cube_Read(object):
     def __init__(self, file_address, wavearea, Firstnm,Lastnm):
         self.file_address = file_address

@@ -5,7 +5,10 @@ import tensorflow.python.keras
 import tensorflow.python.keras.utils.np_utils
 import os
 
+#import tensorflow.python.layers.base
 from sklearn.model_selection import train_test_split
+
+import Learning.CNN2d
 
 config = tf.compat.v1.ConfigProto(gpu_options=
                                   tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=0.8)
@@ -23,21 +26,18 @@ loaded = np.load(npzpath + '/eac1.npz')
 x = loaded['x']
 y = np.array(loaded['y'][:, 0]).astype(np.integer) - 1
 
-for file in file_list:
-    if not file.endswith('eac1.npz'):
-        name = npzpath + '/' + file
-        x_ = np.load(name)['x']
-        y_ = np.array(np.load(name)['y'][:, 0]).astype(np.integer) - 1
-        x = np.append(x, x_, axis=0)
-        y = np.append(y, y_, axis=0)
+#for file in file_list:
+#    if not file.endswith('eac1.npz'):
+#        name = npzpath + '/' + file
+#        x_ = np.load(name)['x']
+#        y_ = np.array(np.load(name)['y'][:, 0]).astype(np.integer) - 1
+#        x = np.append(x, x_, axis=0)
+#        y = np.append(y, y_, axis=0)
 
 # 1 => EAC
 # 2 => Stroma
 # 3 => Plattenepithel
 # 4 => Blank
-
-
-
 
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=42)
 
@@ -60,33 +60,38 @@ x_train = x_train.reshape(x_train.shape[0], 61, 3, 3)
 x_test = x_test.reshape(x_test.shape[0], 61, 3, 3)
 
 
+########################################CustomizedPooling Layer################################################
+class Depth_pool_selection(tf.keras.layers.Layer):
+    def __init__(self, reduce_function=1,  **kwargs):
+        self.reduce_function = reduce_function
+        super(Depth_pool_selection, self).__init__(**kwargs)
+
+    def call(self, input_data, **kwargs):
+        if self.reduce_function:
+            return tf.compat.v1.reduce_mean(input_data, axis=[3], keepdims=True)
+        else:
+            return tf.compat.v1.reduce_max(input_data, axis=[3], keepdims=True)
+
+    def get_config(self):
+        config = super().get_config().copy()
+        return config
+
+########################################Lambda Pooling Layer################################################
 
 depth_pool_mean = tensorflow.keras.layers.Lambda(
     lambda X: tf.compat.v1.reduce_mean(X, axis=[3], keepdims=True))
 
 depth_pool_max = tensorflow.keras.layers.Lambda(
-    lambda X: tf.compat.v1.reduce_max(X, axis=[3], keepdims=True))
+    lambda X: tf.compat.v1.reduce_mean(X, axis=[3], keepdims=True))
 
-#Create model as 2D + 61 channel
-# model = tensorflow.keras.Sequential()
-# model.add(tensorflow.keras.layers.Conv2D(128, kernel_size=3, activation='relu', kernel_initializer='he_uniform',
-#                                          input_shape=sample_shape, padding="SAME"))
-# model.add(depth_pool_max)
-# model.add(tensorflow.keras.layers.Conv2D(128, kernel_size=3, activation='relu', kernel_initializer='he_uniform',
-#                                          padding="SAME"))
-# model.add(depth_pool_max)
-# model.add(tensorflow.keras.layers.Conv2D(64, kernel_size=3, activation='relu', kernel_initializer='he_uniform',
-#                                          padding="SAME"))
-# model.add(depth_pool_max)
-# model.add(tensorflow.keras.layers.Conv2D(64, kernel_size=3, activation='relu', kernel_initializer='he_uniform',
-#                                          padding="SAME"))
-# model.add(depth_pool_max)
-# model.add(tensorflow.keras.layers.Flatten())
-# model.add(tensorflow.keras.layers.Dense(256, activation='relu', kernel_initializer='he_uniform'))
-# model.add(tensorflow.keras.layers.Dense(no_classes, activation='softmax'))
+
 def depth_pool_selection(i):
-    if i == 0: return depth_pool_max
-    else: return depth_pool_mean
+    if i == 0:
+        return depth_pool_max
+    else:
+        return depth_pool_mean
+
+###################################################Build Model###################################################
 
 recall, precision, auc = tf.keras.metrics.Recall(), tf.keras.metrics.Precision(), tf.keras.metrics.AUC()
 def get_model(layer_sizes, kernel_size, kernel_initializer, depth_pool, dropout, learning_rate, activation):
@@ -95,11 +100,13 @@ def get_model(layer_sizes, kernel_size, kernel_initializer, depth_pool, dropout,
     model.add(tensorflow.keras.layers.Conv2D(layer_sizes[0], kernel_size=kernel_size, activation=activation,
                                              input_shape=sample_shape, kernel_initializer=kernel_initializer,
                                              padding="SAME"))
+    #model.add(Depth_pool_selection(reduce_function=depth_pool[0]))
     model.add(depth_pool_selection(depth_pool[0]))
     for layer in layer_sizes[1:]:
         model.add(tensorflow.keras.layers.Conv2D(layer, kernel_size=kernel_size, activation=activation,
                                                  kernel_initializer=kernel_initializer, padding="SAME"))
-        model.add(depth_pool_selection(depth_pool[i]))
+        #model.add(Depth_pool_selection(reduce_function=depth_pool[i]))
+        model.add(depth_pool_selection(depth_pool[0]))
         i = ++i
         if dropout:
             model.add(tf.keras.layers.Dropout(dropout))
@@ -182,7 +189,7 @@ def train_model_full(x_train, y_train, epochs, params, log_dir, id):
     tf.keras.backend.clear_session()
 
 def run(features, labels, parameter_grid):
-    log_dir = "logs/hparam/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_dir = "logs/hparam1/" + datetime.now().strftime("%Y%m%d-%H%M%S")
     session = 0
     for params in parameter_grid:
         run_name = "run-{0}".format(session)
@@ -207,5 +214,4 @@ param_dict = {
             }
 
 grid = sklearn.model_selection.ParameterGrid(param_dict)
-
 run(x_train, targets_train, grid)

@@ -1,93 +1,91 @@
-import sklearn.model_selection
+import sklearn
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
-import tensorflow.python.keras
-import tensorflow.python.keras.layers
-import tensorflow.python.keras.models
 import tensorflow.python.keras.utils.np_utils
-import os
-
+import helperClass as help
+from tensorflow.keras.layers import TimeDistributed
 from sklearn.model_selection import train_test_split
+from _datetime import datetime
+from tensorboard.plugins.hparams import api as hp
+from tensorboard import program
 
-#config = tf.compat.v1.ConfigProto(gpu_options=
-#                                  tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=0.8)
-#                                  )
-#config.gpu_options.allow_growth = True
+def get_model(layer_sizes_conv, layer_sizes_rnn, dropout, epochs, momentum, activation, dense_act):
+    model = tf.keras.Sequential()
+    model.add(TimeDistributed(tf.keras.layers.Conv2D(filters=layer_sizes_conv[0], kernel_size=(3), padding='same', activation=activation,
+                               input_shape=(3, 3, 1))))
+    for layer in layer_sizes_conv[1:]:
+        model.add(TimeDistributed(tf.keras.layers.Conv2D(filters=layer, kernel_size=(3), padding='same', activation=activation)))
+        if dropout:
+            model.add(TimeDistributed(tf.keras.layers.Dropout(dropout)))
+    model.add(TimeDistributed(tf.keras.layers.BatchNormalization()))
+    model.add(TimeDistributed(tf.keras.layers.Flatten()))
+    model.add(tf.keras.layers.SimpleRNN(layer_sizes_rnn[0], unroll=True, return_sequences=True, return_state=False))
+    for layer in layer_sizes_rnn[1:]:
+        model.add(tf.keras.layers.SimpleRNN(layer, unroll=True))
+    model.add(tf.keras.layers.Dense(100, activation=dense_act))
+    model.add(tf.keras.layers.Dense(3, activation='softmax'))
+    learning_rate = 0.01
+    decay_rate = learning_rate / epochs
+    momentum = momentum
+    opt = tf.keras.optimizers.SGD(lr=learning_rate, momentum=momentum, decay=decay_rate, nesterov=False)
+    model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
+    return model
 
-#session = tf.compat.v1.Session(config=config)
-#tf.compat.v1.keras.backend.set_session(session)
+tb = program.TensorBoard()
+#tb.configure(argv=[None, '--logdir', 'C:/Users/Anna/Desktop/Masterarbeit/logs'])
+tb.configure(argv=[None, '--logdir', '/home/sc.uni-leipzig.de/ay312doty/logs'])
+url = tb.launch()
 
-npzpath = 'C:/Users/Anna/Desktop/Masterarbeit/npz'
-#npzpath = '/home/sc.uni-leipzig.de/ay312doty/npz'
+def train_model_k_fold(x_train, x_test, y_train, y_test, params, log_dir, id):
+    model = get_model(eval(params['layer_sizes_conv']), eval(params['layer_sizes_rnn']), params['dropout'], params['epochs'],
+                      params['momentum'], params['activation'], params['dense_act'])
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir)
+    hp_callback = hp.KerasCallback(log_dir, params, trial_id=id)
+    # stop_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience = 4)
+    model.fit(x=x_train,
+              y=y_train,
+              epochs=params['epochs'],
+              validation_data=(x_test, y_test),
+              callbacks=[tensorboard_callback, hp_callback],
+              batch_size=params['batch_size'])
+    model.save(log_dir + ".h5")
+    tf.keras.backend.clear_session()
 
-file_list = os.listdir(npzpath)
-loaded = np.load(npzpath + '/eac1.npz')
-x = loaded['x']
-y = np.array(loaded['y'][:, 0]).astype(np.integer) - 1
+x, y = help.load3Ddata()
+x, y = help.balanced_dataset(x, y, [0, 2])
+x = x[y < 3]
+y = y[y < 3]
+sample_shape = (61, 3, 3)
+x = x.reshape(x.shape[0], 61, 3, 3, 1)
 
-# for file in file_list:
-#     if not file.endswith('eac1.npz'):
-#         name = npzpath + '/' + file
-#         x_ = np.load(name)['x']
-#         y_ = np.array(np.load(name)['y'][:, 0]).astype(np.integer) - 1
-#         x = np.append(x, x_, axis=0)
-#         y = np.append(y, y_, axis=0)
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=42)
 
-# 1 => EAC
-# 2 => Stroma
-# 3 => Plattenepithel
-# 4 => Blank
-
-
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=42)
-
-# -- Preparatory code --
-# Model configuration
-batch_size = 10
-nr_epochs = 10
-learning_rate = 0.002
-no_classes = 4
-validation_split = 0.2
-verbosity = 1
-
-# Determine sample shape
-sample_shape = (61, 3, 3, 1)
-x_train = x_train.reshape(x_train.shape[0], 61, 3, 3, 1)
-x_test = x_test.reshape(x_test.shape[0], 61, 3, 3, 1)
-
-
-# Convert target vectors to categorical targets
-targets_train = tensorflow.python.keras.utils.np_utils.to_categorical(y_train).astype(np.integer)
+targets_train = tensorflow.keras.utils.to_categorical(y_train).astype(np.integer)
 targets_test = tensorflow.keras.utils.to_categorical(y_test).astype(np.integer)
 
-inputShape = (sample_shape)
-Input_words = tf.keras.Input(shape=inputShape, name='input_vid')
-x = tf.keras.layers.TimeDistributed(tf.keras.layers.Conv2D(filters=50, kernel_size=(3), padding='same', activation='relu'))(Input_words)
-#x = tf.keras.layers.TimeDistributed(tf.keras.layers.MaxPooling2D(pool_size=(3)))(x)
-x = tf.keras.layers.TimeDistributed(tf.keras.layers.SpatialDropout2D(0.2))(x)
-x = tf.keras.layers.TimeDistributed(tf.keras.layers.BatchNormalization())(x)
-x = tf.keras.layers.TimeDistributed(tf.keras.layers.Flatten())(x)
-x = tf.keras.layers.LSTM(200, dropout=0.2, recurrent_dropout=0.2)(x)
-out = tf.keras.layers.Dense(4,activation='softmax')(x)
-model = tf.keras.Model(inputs=Input_words, outputs=[out])
-opt = tf.keras.optimizers.Adam(lr=1e-3, decay=1e-3 / 200)
+def run(parameter_grid):
+    log_dir = "logs/hparam_lstm/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+    session = 0
+    for params in parameter_grid:
+        run_name = "run-{0}".format(session)
+        train_model_k_fold(x_train, x_test, targets_train, targets_test, params, log_dir + run_name, id=run_name)
+        session += 1
 
-model.compile(loss = 'categorical_crossentropy', optimizer=opt,metrics = ['accuracy'])
-model.fit(x=x_train,y=targets_train,epochs=1,batch_size=32)
+layer_sizes_conv = [(32, 16), (64), (64, 32)]
+layer_sizes_rnn = [(512, 256), (256, 128)]
+layer_sizes_conv = list(map(lambda a: str(a), layer_sizes_conv))
+layer_sizes_rnn = list(map(lambda a: str(a), layer_sizes_rnn))
 
-# Generate generalization metrics
-score = model.evaluate(x_test, targets_test, verbose=0)
-print(f'Test loss: {score[0]} / Test accuracy: {score[1]}')
+param_dict = {
+    'batch_size': [100, 150],
+    'epochs': [30],
+    'layer_sizes_conv': layer_sizes_conv,
+    'layer_sizes_rnn': layer_sizes_rnn,
+    'momentum': [0.8],
+    'dropout': [0, 0.1],
+    'activation': ['relu', 'tanh'],
+    'dense_act': ['relu', 'tanh']
+}
 
-# Plot history: Categorical crossentropy & Accuracy
-plt.plot(model.history['loss'], label='Categorical crossentropy (training data)')
-plt.plot(model.history['val_loss'], label='Categorical crossentropy (validation data)')
-plt.plot(model.history['accuracy'], label='Accuracy (training data)')
-plt.plot(model.history['val_accuracy'], label='Accuracy (validation data)')
-plt.title('Model performance')
-plt.ylabel('Loss value')
-plt.xlabel('N. epoch')
-plt.legend(loc="upper left")
-plt.show()
-
+grid = sklearn.model_selection.ParameterGrid(param_dict)
+run(grid)

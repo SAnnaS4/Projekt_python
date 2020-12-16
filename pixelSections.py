@@ -123,11 +123,7 @@ class LoadPatients:
             self.all_values.append(group)
             self.all_values.append(patientnumber)
             self.all_values.append(newpath)
-            #section3d = np.zeros([0, 3, 3])
             section3d = self.get_section(spectrum_data[:, :, :], x, y, 1)
-            # for iwave in range(0, i_wave_length):
-            #     section = self.get_section(spectrum_data[:, :, iwave], x, y, 1)
-            #     section3d = np.append(section3d, [section], axis=0)
             self.liste = np.append(self.liste, [section3d], axis=0)
         print('Marker Loaded')
 
@@ -142,29 +138,6 @@ class LoadData:
         self.groupname3 = groupname3
         self.groupname4 = groupname4
         self.groupname5 = groupname5
-
-    # def load_section_data(self):
-    #     import multiprocessing as mp
-    #     cpus = mp.cpu_count()
-    #     print("Number of processors: ", cpus)
-    #     ordner = self.auslesen_offenbach()
-    #     ordner_list = np.array_split(ordner, cpus)
-    #
-    #     if __name__ == '__main__':
-    #         print("main")
-    #         # Step 1: Init multiprocessing.Pool()
-    #         pool = mp.Pool(cpus)
-    #
-    #         # Step 2: `pool.apply` the `howmany_within_range()`
-    #         results = [pool.map(self.parallel, [row for row in ordner_list])]
-    #         print("ready")
-    #         pool.close()
-    #         #self.parallel(ordner)
-
-    # def parallel(self, ordner):
-    #     LoadPatients(ordner, self.groupname0, self.groupname1, self.groupname2, self.groupname3, self.groupname4,
-    #                  self.groupname5).start()
-    #     return 1
 
     def auslesen_offenbach(self):
         ordner = np.zeros([0, 3])

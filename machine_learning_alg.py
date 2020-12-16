@@ -43,9 +43,6 @@ class blind_test_algorithm(object):
 
         ###gaussian pca ###
         self.Lastnm = 65
-
-
-
         self.Firstnm = 0
         self.WaveArea = self.Lastnm - self.Firstnm
         print(
